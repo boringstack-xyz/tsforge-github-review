@@ -15,6 +15,12 @@ function requireEnv(name: string): string {
   return value;
 }
 
+export function optionalEnv(name: string): string | undefined {
+  const value = process.env[name];
+
+  return value === undefined || value.length === 0 ? undefined : value;
+}
+
 async function gitDiff(baseRef: string): Promise<string> {
   const proc = Bun.spawn(["git", "diff", `${baseRef}...HEAD`], {
     stdout: "pipe",
@@ -30,9 +36,9 @@ async function gitDiff(baseRef: string): Promise<string> {
 async function main(): Promise<number> {
   const token = requireEnv("INPUT_GITHUB-TOKEN");
   const baseRef = requireEnv("INPUT_BASE-REF");
-  const modelUrl = process.env["INPUT_MODEL-URL"];
-  const modelId = process.env["INPUT_MODEL-ID"];
-  const lokiUrl = process.env["INPUT_LOKI-URL"];
+  const modelUrl = optionalEnv("INPUT_MODEL-URL");
+  const modelId = optionalEnv("INPUT_MODEL-ID");
+  const lokiUrl = optionalEnv("INPUT_LOKI-URL");
 
   const [owner, repo] = requireEnv("GITHUB_REPOSITORY").split("/");
   const prNumber = Number(requireEnv("PR_NUMBER"));
@@ -78,9 +84,11 @@ async function main(): Promise<number> {
   return 0;
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err: unknown) => {
-    process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
-    process.exit(1);
-  });
+if (import.meta.main) {
+  main()
+    .then((code) => process.exit(code))
+    .catch((err: unknown) => {
+      process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
+      process.exit(1);
+    });
+}
