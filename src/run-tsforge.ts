@@ -1,11 +1,17 @@
 // src/run-tsforge.ts
 import { isReviewReport, type IReviewReport } from "./types";
 
+/** `tsforge review --json` prints human-readable progress/gate lines to
+ *  stdout before the report — the JSON is documented (args.ts) as the LAST
+ *  line of stdout, not the whole stream. Parse only that line. */
 export function parseTsforgeOutput(stdout: string): IReviewReport {
+  const lines = stdout.split("\n").filter((line) => line.trim().length > 0);
+  const lastLine = lines[lines.length - 1];
+
   let parsed: unknown;
 
   try {
-    parsed = JSON.parse(stdout);
+    parsed = lastLine === undefined ? JSON.parse(stdout) : JSON.parse(lastLine);
   } catch {
     throw new Error("tsforge review --json did not produce a valid IReviewReport");
   }
