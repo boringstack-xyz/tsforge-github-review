@@ -32,6 +32,12 @@ local one.
 The action must run *after* `actions/checkout` — it operates on the
 already-checked-out working tree, it does not fetch the code itself.
 
+The example above assumes a `pull_request` or `pull_request_target` trigger,
+where `github.event.pull_request` is populated directly. The action also
+supports being triggered by an `issue_comment` event (e.g. a slash-command
+comment on a PR) — it detects which shape fired and reads the PR number/URL
+accordingly either way, so no extra configuration is needed for that case.
+
 ## Inputs
 
 | Input | Required | Description |
