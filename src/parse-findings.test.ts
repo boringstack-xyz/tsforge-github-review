@@ -88,7 +88,7 @@ describe(buildSummaryBody.name, () => {
   test("flags an incomplete review even when findings is empty", () => {
     const body = buildSummaryBody([], [], ["review"]);
 
-    expect(body).toStartWith("✅ Looks good");
+    expect(body).toStartWith("❔ Incomplete review");
     expect(body).toContain("1 reviewer(s) did not complete (review)");
   });
 
@@ -98,14 +98,34 @@ describe(buildSummaryBody.name, () => {
     expect(body).not.toContain("did not complete");
   });
 
-  test("combines a Needs changes verdict, a failure note, and out-of-diff findings", () => {
+  // The verdict line itself (not just the note beneath it) must be honest:
+  // "✅ Looks good" and "⚠️ Needs changes" both imply the review reached a
+  // real judgment, which it didn't if a reviewer failed to complete.
+  test("uses the Incomplete review verdict, not Looks good, when a reviewer failed and findings is empty", () => {
+    const body = buildSummaryBody([], [], ["review"]);
+
+    expect(body).toStartWith("❔ Incomplete review");
+    expect(body).not.toStartWith("✅ Looks good");
+  });
+
+  // failedReviewers takes precedence over the findings-based verdict even
+  // when findings happen to be non-empty — an incomplete review's findings
+  // can't be trusted as complete either way.
+  test("uses the Incomplete review verdict even when findings is non-empty", () => {
+    const body = buildSummaryBody([finding({ severity: "error" })], [], ["review"]);
+
+    expect(body).toStartWith("❔ Incomplete review");
+    expect(body).not.toStartWith("⚠️ Needs changes");
+  });
+
+  test("combines the Incomplete review verdict, a failure note, and out-of-diff findings", () => {
     const body = buildSummaryBody(
       [finding({ severity: "error" })],
       [finding({ file: "src/b.ts", line: 99 })],
       ["review"]
     );
 
-    expect(body).toStartWith("⚠️ Needs changes");
+    expect(body).toStartWith("❔ Incomplete review");
     expect(body).toContain("1 reviewer(s) did not complete (review)");
     expect(body).toContain("src/b.ts:99");
   });

@@ -2,8 +2,9 @@
 import { runTsforgeReview } from "./run-tsforge";
 import { validLines } from "./diff-lines";
 import { buildReviewComments, buildSummaryBody } from "./parse-findings";
-import { buildLokiPayload, pushToLoki } from "./loki";
+import { buildLokiPayload, pushToLoki, type ILokiPayloadOpts } from "./loki";
 import { postReview } from "./github";
+import type { IReviewReport } from "./types";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -19,6 +20,21 @@ export function optionalEnv(name: string): string | undefined {
   const value = process.env[name];
 
   return value === undefined || value.length === 0 ? undefined : value;
+}
+
+/** The Loki `verdict` label for a completed post. An incomplete review (any
+ *  `failedReviewers`) must never report "looks_good"/"needs_changes" — those
+ *  imply the review actually reached a judgment. This mirrors
+ *  `buildSummaryBody`'s "❔ Incomplete review" precedence in
+ *  `parse-findings.ts` so the PR-facing text and Loki telemetry agree. */
+export function lokiVerdict(
+  report: Pick<IReviewReport, "findings" | "failedReviewers">
+): ILokiPayloadOpts["verdict"] {
+  if ((report.failedReviewers ?? []).length > 0) {
+    return "n/a";
+  }
+
+  return report.findings.some((f) => f.severity === "error") ? "needs_changes" : "looks_good";
 }
 
 async function gitDiff(baseRef: string): Promise<string> {
@@ -62,11 +78,10 @@ async function main(): Promise<number> {
   const result = await postReview({ token, owner, repo, prNumber, body, comments });
 
   if (lokiUrl !== undefined) {
-    const hasError = report.findings.some((f) => f.severity === "error");
     const payload = buildLokiPayload({
       repo: `${owner}/${repo}`,
       outcome: result.ok ? "posted" : "error",
-      verdict: result.ok ? (hasError ? "needs_changes" : "looks_good") : "n/a",
+      verdict: result.ok ? lokiVerdict(report) : "n/a",
       prNumber,
       prUrl,
       timestampNs: (BigInt(Date.now()) * 1_000_000n).toString(),
