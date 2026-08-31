@@ -1,0 +1,42 @@
+name: "tsforge-github-review"
+description: "Runs tsforge review against a PR and posts findings as inline, resolvable GitHub review comments."
+author: "boringstack-xyz"
+branding:
+  icon: "eye"
+  color: "blue"
+
+inputs:
+  github-token:
+    description: "Token with pull-requests: write on the target repo."
+    required: true
+  base-ref:
+    description: "The PR's base branch, to diff against."
+    required: true
+  model-url:
+    description: "Sets TSFORGE_BASE_URL for the tsforge review invocation."
+    required: false
+  model-id:
+    description: "Sets TSFORGE_MODEL for the tsforge review invocation."
+    required: false
+  loki-url:
+    description: "If set, pushes one outcome event to <loki-url>/loki/api/v1/push. Best-effort."
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    # A composite action's OWN steps don't get INPUT_* env vars automatically
+    # (that's a Docker/JS-action convention) — bridge inputs -> the env names
+    # src/index.ts already reads via process.env, explicitly, in one place.
+    - name: Run tsforge review and post the result
+      shell: bash
+      env:
+        INPUT_GITHUB-TOKEN: ${{ inputs.github-token }}
+        INPUT_BASE-REF: ${{ inputs.base-ref }}
+        INPUT_MODEL-URL: ${{ inputs.model-url }}
+        INPUT_MODEL-ID: ${{ inputs.model-id }}
+        INPUT_LOKI-URL: ${{ inputs.loki-url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.issue.number }}
+        PR_URL: ${{ github.event.issue.pull_request.html_url }}
+      run: bun run "${{ github.action_path }}/src/index.ts"

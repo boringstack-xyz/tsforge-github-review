@@ -1,1 +1,4 @@
-.local-plans/
+node_modules/
+dist/
+*.log
+.env
