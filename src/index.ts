@@ -57,7 +57,7 @@ async function main(): Promise<number> {
   const diffText = await gitDiff(baseRef);
   const lines = validLines(diffText);
   const { comments, outOfDiff } = buildReviewComments(report.findings, lines);
-  const body = buildSummaryBody(report.findings, outOfDiff);
+  const body = buildSummaryBody(report.findings, outOfDiff, report.failedReviewers ?? []);
 
   const result = await postReview({ token, owner, repo, prNumber, body, comments });
 

@@ -80,4 +80,33 @@ describe(buildSummaryBody.name, () => {
     expect(body).toContain("src/b.ts:99");
     expect(body).toContain("off-by-one in the loop bound");
   });
+
+  // Confirmed live against tsforge PR #358: a reviewer that hits `max_turns`
+  // still returns a schema-valid report with `findings: []` and
+  // `failedReviewers: ["review"]`. Without surfacing that, an incomplete
+  // review reads as a clean "✅ Looks good".
+  test("flags an incomplete review even when findings is empty", () => {
+    const body = buildSummaryBody([], [], ["review"]);
+
+    expect(body).toStartWith("✅ Looks good");
+    expect(body).toContain("1 reviewer(s) did not complete (review)");
+  });
+
+  test("does not add a failure note when no reviewers failed", () => {
+    const body = buildSummaryBody([], []);
+
+    expect(body).not.toContain("did not complete");
+  });
+
+  test("combines a Needs changes verdict, a failure note, and out-of-diff findings", () => {
+    const body = buildSummaryBody(
+      [finding({ severity: "error" })],
+      [finding({ file: "src/b.ts", line: 99 })],
+      ["review"]
+    );
+
+    expect(body).toStartWith("⚠️ Needs changes");
+    expect(body).toContain("1 reviewer(s) did not complete (review)");
+    expect(body).toContain("src/b.ts:99");
+  });
 });

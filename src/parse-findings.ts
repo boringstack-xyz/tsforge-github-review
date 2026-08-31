@@ -53,21 +53,34 @@ function commentBody(finding: IVerifiedFinding): string {
 /** The review's overall summary text: a mechanical verdict (error-severity
  *  findings exist, or they don't — no "worth discussing" middle state, unlike
  *  the diff-only reviewer's model-authored verdict), plus any out-of-diff
- *  findings that couldn't become inline comments. */
+ *  findings that couldn't become inline comments.
+ *
+ *  `failedReviewers` (from `IReviewReport.failedReviewers`) matters here
+ *  because a reviewer that fails to complete (e.g. hits its turn limit)
+ *  still produces a schema-valid report with `findings: []` — without this,
+ *  that reads as a clean "✅ Looks good" when in fact no review happened.
+ *  Confirmed live: a real `tsforge review --json` run against tsforge PR
+ *  #358 returned `{"findings":[],"failedReviewers":["review"]}` after the
+ *  reviewer hit `max_turns`. */
 export function buildSummaryBody(
   findings: readonly IVerifiedFinding[],
-  outOfDiff: readonly IVerifiedFinding[]
+  outOfDiff: readonly IVerifiedFinding[],
+  failedReviewers: readonly string[] = []
 ): string {
   const hasError = findings.some((f) => f.severity === "error");
   const verdictLine = hasError ? "⚠️ Needs changes" : "✅ Looks good";
 
-  if (outOfDiff.length === 0) {
-    return verdictLine;
-  }
+  const failureNote =
+    failedReviewers.length === 0
+      ? undefined
+      : `⚠️ ${String(failedReviewers.length)} reviewer(s) did not complete (${failedReviewers.join(", ")}) — this review may be incomplete.`;
 
-  const extra = outOfDiff
-    .map((f) => `- \`${f.file}:${String(f.line)}\` — ${f.claim}: ${f.reason}`)
-    .join("\n");
+  const extraNote =
+    outOfDiff.length === 0
+      ? undefined
+      : `${String(outOfDiff.length)} finding(s) reference lines outside this diff and couldn't be left as inline comments:\n\n${outOfDiff
+          .map((f) => `- \`${f.file}:${String(f.line)}\` — ${f.claim}: ${f.reason}`)
+          .join("\n")}`;
 
-  return `${verdictLine}\n\n${outOfDiff.length} finding(s) reference lines outside this diff and couldn't be left as inline comments:\n\n${extra}`;
+  return [verdictLine, failureNote, extraNote].filter((part) => part !== undefined).join("\n\n");
 }
