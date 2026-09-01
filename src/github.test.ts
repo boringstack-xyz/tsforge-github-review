@@ -13,8 +13,8 @@ describe(postReview.name, () => {
     const result = await postReview(
       {
         token: "ghp_test",
-        owner: "dreamdata-io",
-        repo: "dreamdata-ui",
+        owner: "octocat",
+        repo: "hello-world",
         prNumber: 371,
         body: "✅ Looks good",
         comments: [{ path: "src/a.ts", line: 12, body: "finding text" }],
@@ -25,7 +25,7 @@ describe(postReview.name, () => {
     expect(result).toEqual({ ok: true });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe(
-      "https://api.github.com/repos/dreamdata-io/dreamdata-ui/pulls/371/reviews"
+      "https://api.github.com/repos/octocat/hello-world/pulls/371/reviews"
     );
 
     const sentBody = JSON.parse(String(calls[0]?.init.body));

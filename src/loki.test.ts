@@ -4,11 +4,11 @@ import { buildLokiPayload, pushToLoki } from "./loki";
 describe(buildLokiPayload.name, () => {
   test("builds the exact stream-label shape the dashboard expects", () => {
     const payload = buildLokiPayload({
-      repo: "dreamdata-io/dreamdata-ui",
+      repo: "octocat/hello-world",
       outcome: "posted",
       verdict: "needs_changes",
       prNumber: 371,
-      prUrl: "https://github.com/dreamdata-io/dreamdata-ui/pull/371",
+      prUrl: "https://github.com/octocat/hello-world/pull/371",
       timestampNs: "1234567890000000000",
     });
 
@@ -17,7 +17,7 @@ describe(buildLokiPayload.name, () => {
         {
           stream: {
             job: "ai-review",
-            repo: "dreamdata-io/dreamdata-ui",
+            repo: "octocat/hello-world",
             outcome: "posted",
             trigger: "comment",
             verdict: "needs_changes",
@@ -28,7 +28,7 @@ describe(buildLokiPayload.name, () => {
               "1234567890000000000",
               JSON.stringify({
                 pr_number: 371,
-                pr_url: "https://github.com/dreamdata-io/dreamdata-ui/pull/371",
+                pr_url: "https://github.com/octocat/hello-world/pull/371",
               }),
             ],
           ],
