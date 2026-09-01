@@ -22,7 +22,7 @@ jobs:
 
       - name: Build and push
         env:
-          VERSIONED_TAG: 2.336.0-tsforge0.53.3
+          VERSIONED_TAG: 2.336.0-tsforge0.53.4
         run: |
           docker build \
             -t ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG} \
@@ -30,8 +30,8 @@ jobs:
             runner-image
 
           echo "Smoke-testing the built image..."
-          docker run --rm ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG} tsforge --version | grep -q '0.53.3' \
-            || { echo "::error::tsforge --version did not report the pinned 0.53.3"; exit 1; }
+          docker run --rm ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG} tsforge --version | grep -q '0.53.4' \
+            || { echo "::error::tsforge --version did not report the pinned 0.53.4"; exit 1; }
 
           docker push ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG}
           docker push ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${{ github.sha }}
