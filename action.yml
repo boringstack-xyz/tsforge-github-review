@@ -1,14 +1,11 @@
-name: "tsforge-github-review"
-description: "Runs tsforge review against a PR and posts findings as inline, resolvable GitHub review comments."
+name: "tsforge-github-review (analyze)"
+description: "Runs tsforge review against a checked-out PR and writes findings + diff to files, for a separate no-checkout job to post. Holds no GitHub token — see post/action.yml."
 author: "boringstack-xyz"
 branding:
   icon: "eye"
   color: "blue"
 
 inputs:
-  github-token:
-    description: "Token with pull-requests: write on the target repo."
-    required: true
   base-ref:
     description: "The PR's base branch, to diff against."
     required: true
@@ -18,32 +15,24 @@ inputs:
   model-id:
     description: "Sets TSFORGE_MODEL for the tsforge review invocation."
     required: false
-  loki-url:
-    description: "If set, pushes one outcome event to <loki-url>/loki/api/v1/push. Best-effort."
-    required: false
 
 runs:
   using: "composite"
   steps:
+    # Deliberately no github-token input at all: this action checks out and
+    # runs tsforge against untrusted PR content, so the calling job should
+    # hold no write-scoped credentials for it to ever touch, by construction
+    # — not just by convention. Post the resulting findings with
+    # post/action.yml, in a separate job that never checks out code. See
+    # README.md for the full split rationale.
+    #
     # A composite action's OWN steps don't get INPUT_* env vars automatically
     # (that's a Docker/JS-action convention) — bridge inputs -> the env names
-    # src/index.ts already reads via process.env, explicitly, in one place.
-    #
-    # PR_NUMBER / PR_URL support two trigger shapes: a `pull_request` or
-    # `pull_request_target` event, where the PR is `github.event.pull_request`
-    # directly, and an `issue_comment` event triggered by a comment on a PR,
-    # where it's only reachable via `github.event.issue`/`issue.pull_request`
-    # (`github.event.pull_request` is undefined on that event). The `||`
-    # fallback picks whichever shape the trigger actually populated.
-    - name: Run tsforge review and post the result
+    # src/analyze.ts reads via process.env, explicitly, in one place.
+    - name: Run tsforge review, write findings + diff
       shell: bash
       env:
-        INPUT_GITHUB-TOKEN: ${{ inputs.github-token }}
         INPUT_BASE-REF: ${{ inputs.base-ref }}
         INPUT_MODEL-URL: ${{ inputs.model-url }}
         INPUT_MODEL-ID: ${{ inputs.model-id }}
-        INPUT_LOKI-URL: ${{ inputs.loki-url }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
-        PR_URL: ${{ github.event.pull_request.html_url || github.event.issue.pull_request.html_url }}
-      run: bun run "${{ github.action_path }}/src/index.ts"
+      run: bun run "${{ github.action_path }}/src/analyze.ts"

@@ -1,0 +1,48 @@
+name: "tsforge-github-review (post)"
+description: "Posts findings from a prior 'analyze' job as inline, resolvable GitHub review comments. Never checks out code — the only job in this split that should hold pull-requests: write."
+author: "boringstack-xyz"
+branding:
+  icon: "message-square"
+  color: "blue"
+
+inputs:
+  github-token:
+    description: "Token with pull-requests: write on the target repo."
+    required: true
+  findings-file:
+    description: "Path to the findings JSON file the analyze action wrote."
+    required: false
+    default: "tsforge-review-findings.json"
+  diff-file:
+    description: "Path to the diff text file the analyze action wrote."
+    required: false
+    default: "tsforge-review-diff.txt"
+  loki-url:
+    description: "If set, pushes one outcome event to <loki-url>/loki/api/v1/push. Best-effort."
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    # findings-file/diff-file default here MUST match analyze.ts's
+    # FINDINGS_FILE/DIFF_FILE constants — YAML can't import the TS source of
+    # truth, so this is a manually-kept-in-sync pair; a mismatch would only
+    # surface at runtime (a missing-file error), not at review time.
+    #
+    # PR_NUMBER / PR_URL support two trigger shapes: a `pull_request` or
+    # `pull_request_target` event, where the PR is `github.event.pull_request`
+    # directly, and an `issue_comment` event triggered by a comment on a PR,
+    # where it's only reachable via `github.event.issue`/`issue.pull_request`
+    # (`github.event.pull_request` is undefined on that event). The `||`
+    # fallback picks whichever shape the trigger actually populated.
+    - name: Post the review
+      shell: bash
+      env:
+        INPUT_GITHUB-TOKEN: ${{ inputs.github-token }}
+        INPUT_FINDINGS-FILE: ${{ inputs.findings-file }}
+        INPUT_DIFF-FILE: ${{ inputs.diff-file }}
+        INPUT_LOKI-URL: ${{ inputs.loki-url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        PR_URL: ${{ github.event.pull_request.html_url || github.event.issue.pull_request.html_url }}
+      run: bun run "${{ github.action_path }}/../src/post.ts"
