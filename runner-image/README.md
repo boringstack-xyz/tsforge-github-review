@@ -7,8 +7,12 @@ directly, with no network install step and no writes into the pod's own
 filesystem at job time — useful for anyone running this action on a
 hardened, read-only-root self-hosted runner.
 
-Published to `ghcr.io/boringstack-xyz/tsforge-reviewer-runner`, public —
-anyone can pull it, no credentials needed.
+Published to `ghcr.io/boringstack-xyz/tsforge-reviewer-runner`. GHCR
+packages default to private on first push — this one should be flipped to
+public in the org's package settings (Packages → tsforge-reviewer-runner →
+Package settings → Change visibility), since it contains no
+Dreamdata/company-specific material and consumers of this action
+shouldn't need a credential just to pull the reference runner image.
 
 Rebuild + push via `.github/workflows/build-runner-image.yml` whenever
 this Dockerfile or the pinned tsforge version changes. The image is
