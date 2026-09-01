@@ -40,8 +40,8 @@ export function buildReviewComments(
 }
 
 function commentBody(finding: IVerifiedFinding): string {
-  const head = `**[${finding.lens}]** ${finding.claim}`;
-  const detail = `${finding.claim}: ${finding.reason}`;
+  const head = `**${finding.claim}**`;
+  const detail = finding.reason;
   const fix =
     finding.suggestedFix === undefined
       ? ""

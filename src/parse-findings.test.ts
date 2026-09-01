@@ -25,7 +25,7 @@ describe(buildReviewComments.name, () => {
       {
         path: "src/a.ts",
         line: 12,
-        body: "**[correctness]** off-by-one in the loop bound\n\noff-by-one in the loop bound: index i can reach array.length, throwing on the last iteration",
+        body: "**off-by-one in the loop bound**\n\nindex i can reach array.length, throwing on the last iteration",
       },
     ]);
     expect(outOfDiff).toEqual([]);
