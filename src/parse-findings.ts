@@ -41,13 +41,16 @@ export function buildReviewComments(
 
 // Confirmed live (app.dreamdata.io PR #8761): the model sometimes writes
 // `reason` as `claim` verbatim plus a little more, rather than a distinct
-// elaboration — bolding claim as a headline above reason then prints the
-// same sentence twice. When reason already starts with claim, show reason
-// alone instead of both.
+// elaboration. Shared by commentBody and buildSummaryBody's out-of-diff
+// list — both concatenate claim + reason and both hit this live.
+function reasonRestatesClaim(claim: string, reason: string): boolean {
+  return reason.startsWith(claim);
+}
+
 function commentBody(finding: IVerifiedFinding): string {
   const claim = finding.claim.trim();
   const reason = finding.reason.trim();
-  const body = reason.startsWith(claim) ? reason : `**${claim}**\n\n${reason}`;
+  const body = reasonRestatesClaim(claim, reason) ? reason : `**${claim}**\n\n${reason}`;
   const fix =
     finding.suggestedFix === undefined
       ? ""
@@ -96,7 +99,13 @@ export function buildSummaryBody(
     outOfDiff.length === 0
       ? undefined
       : `${String(outOfDiff.length)} finding(s) reference lines outside this diff and couldn't be left as inline comments:\n\n${outOfDiff
-          .map((f) => `- \`${f.file}:${String(f.line)}\` — ${f.claim}: ${f.reason}`)
+          .map((f) => {
+            const claim = f.claim.trim();
+            const reason = f.reason.trim();
+            const text = reasonRestatesClaim(claim, reason) ? reason : `${claim}: ${reason}`;
+
+            return `- \`${f.file}:${String(f.line)}\` — ${text}`;
+          })
           .join("\n")}`;
 
   return [verdictLine, failureNote, extraNote].filter((part) => part !== undefined).join("\n\n");
