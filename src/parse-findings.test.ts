@@ -98,6 +98,26 @@ describe(buildSummaryBody.name, () => {
     expect(body).toContain("off-by-one in the loop bound");
   });
 
+  // Same live-confirmed redundancy as commentBody (app.dreamdata.io PR
+  // #8764) — this list built its own claim: reason string independently
+  // and hit the exact same duplication.
+  test("shows reason alone in the out-of-diff list when reason already starts with claim", () => {
+    const redundant = finding({
+      file: "src/b.ts",
+      line: 99,
+      claim: "this export has zero callers in the codebase",
+      reason: "this export has zero callers in the codebase, so there is no blast radius",
+    });
+    const body = buildSummaryBody([], [redundant]);
+
+    expect(body).toContain(
+      "- `src/b.ts:99` — this export has zero callers in the codebase, so there is no blast radius"
+    );
+    expect(body).not.toContain(
+      "this export has zero callers in the codebase: this export has zero callers"
+    );
+  });
+
   // Confirmed live against tsforge PR #358: a reviewer that hits `max_turns`
   // still returns a schema-valid report with `findings: []` and
   // `failedReviewers: ["review"]`. Without surfacing that, an incomplete
