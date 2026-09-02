@@ -15,6 +15,9 @@ inputs:
   model-id:
     description: "Sets TSFORGE_MODEL for the tsforge review invocation."
     required: false
+  loki-url:
+    description: "If set, pushes the review's full tool-call trace (tsforge review --log) to <loki-url>/loki/api/v1/push. Best-effort."
+    required: false
 
 runs:
   using: "composite"
@@ -29,10 +32,18 @@ runs:
     # A composite action's OWN steps don't get INPUT_* env vars automatically
     # (that's a Docker/JS-action convention) — bridge inputs -> the env names
     # src/analyze.ts reads via process.env, explicitly, in one place.
+    #
+    # PR_NUMBER mirrors post/action.yml's own bridging: supports both a
+    # pull_request(_target) trigger (github.event.pull_request) and an
+    # issue_comment trigger on a PR (only github.event.issue is populated
+    # there).
     - name: Run tsforge review, write findings + diff
       shell: bash
       env:
         INPUT_BASE-REF: ${{ inputs.base-ref }}
         INPUT_MODEL-URL: ${{ inputs.model-url }}
         INPUT_MODEL-ID: ${{ inputs.model-id }}
+        INPUT_LOKI-URL: ${{ inputs.loki-url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
       run: bun run "${{ github.action_path }}/src/analyze.ts"
