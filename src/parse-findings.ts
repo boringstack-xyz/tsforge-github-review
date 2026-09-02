@@ -39,15 +39,21 @@ export function buildReviewComments(
   return { comments, outOfDiff };
 }
 
+// Confirmed live (app.dreamdata.io PR #8761): the model sometimes writes
+// `reason` as `claim` verbatim plus a little more, rather than a distinct
+// elaboration — bolding claim as a headline above reason then prints the
+// same sentence twice. When reason already starts with claim, show reason
+// alone instead of both.
 function commentBody(finding: IVerifiedFinding): string {
-  const head = `**${finding.claim}**`;
-  const detail = finding.reason;
+  const claim = finding.claim.trim();
+  const reason = finding.reason.trim();
+  const body = reason.startsWith(claim) ? reason : `**${claim}**\n\n${reason}`;
   const fix =
     finding.suggestedFix === undefined
       ? ""
       : `\n\nSuggested fix: ${finding.suggestedFix}`;
 
-  return `${head}\n\n${detail}${fix}`;
+  return `${body}${fix}`;
 }
 
 /** The review's overall summary text: a mechanical verdict (error-severity

@@ -55,6 +55,23 @@ describe(buildReviewComments.name, () => {
       "\n\nSuggested fix: use `i < array.length` instead of `<=`"
     );
   });
+
+  // Confirmed live (app.dreamdata.io PR #8761): the model sometimes writes
+  // reason as claim verbatim plus a bit more, rather than a distinct
+  // elaboration — bolding claim as a headline above reason then printed
+  // the same sentence twice.
+  test("shows reason alone, not claim + reason, when reason already starts with claim", () => {
+    const lines = new Map([["src/a.ts", new Set([12])]]);
+    const redundant = finding({
+      claim: "this export has zero callers in the codebase",
+      reason: "this export has zero callers in the codebase, so there is no blast radius",
+    });
+    const { comments } = buildReviewComments([redundant], lines);
+
+    expect(comments[0]?.body).toBe(
+      "this export has zero callers in the codebase, so there is no blast radius"
+    );
+  });
 });
 
 describe(buildSummaryBody.name, () => {
