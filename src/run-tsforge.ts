@@ -1,4 +1,7 @@
 // src/run-tsforge.ts
+import { readdir, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { isReviewReport, type IReviewReport } from "./types";
 
 const STDOUT_EXCERPT_LENGTH = 200;
@@ -75,14 +78,14 @@ export function buildTsforgeEnv(
   return env;
 }
 
-/** Spawns `tsforge review --base <ref> --json` in the current working
+/** Spawns `tsforge review --base <ref> --json --log` in the current working
  *  directory (the already-checked-out PR) and returns its parsed report.
  *  Model selection is env-var based per TSForge's own convention
  *  (TSFORGE_BASE_URL / TSFORGE_MODEL — confirmed in models-config.ts). */
 export async function runTsforgeReview(opts: IRunTsforgeOpts): Promise<IReviewReport> {
   const env = buildTsforgeEnv(opts, process.env);
 
-  const proc = Bun.spawn(["tsforge", "review", "--base", opts.baseRef, "--json"], {
+  const proc = Bun.spawn(["tsforge", "review", "--base", opts.baseRef, "--json", "--log"], {
     env,
     stdout: "pipe",
     stderr: "inherit",
@@ -92,4 +95,34 @@ export async function runTsforgeReview(opts: IRunTsforgeOpts): Promise<IReviewRe
   await proc.exited;
 
   return parseTsforgeOutput(stdout);
+}
+
+/** `--log`'s file isn't addressable by path — tsforge auto-names it under
+ *  $TSFORGE_HOME/.tsforge/logs (else $HOME), and doesn't export that
+ *  resolution for other packages to import, so it's replicated here. */
+function tsforgeLogsDir(): string {
+  return join(process.env.TSFORGE_HOME ?? homedir(), ".tsforge", "logs");
+}
+
+/** Best-effort: the newest --log JSONL's non-empty lines, or [] on any
+ *  failure — a missing/unreadable trace must never fail the review. Each
+ *  ephemeral runner pod runs exactly one `tsforge review` per lifetime, so
+ *  "newest" (filenames are ISO-timestamp-prefixed, sorting chronologically)
+ *  is never a stale file left over from a prior run. */
+export async function readLatestTraceLog(): Promise<string[]> {
+  try {
+    const dir = tsforgeLogsDir();
+    const names = (await readdir(dir)).filter((n) => n.endsWith(".jsonl")).sort();
+    const newest = names[names.length - 1];
+
+    if (newest === undefined) {
+      return [];
+    }
+
+    const raw = await readFile(join(dir, newest), "utf8");
+
+    return raw.split("\n").filter((line) => line.trim().length > 0);
+  } catch {
+    return [];
+  }
 }
