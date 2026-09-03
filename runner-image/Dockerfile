@@ -28,7 +28,7 @@ RUN curl -fsSL https://bun.sh/install | bash \
 # upgrade mid-review-cycle is exactly the kind of drift this image exists
 # to avoid. Bump deliberately, in its own commit, when adopting a new
 # tsforge release.
-RUN /usr/local/bin/bun install -g @agjs/tsforge@0.53.5 \
+RUN /usr/local/bin/bun install -g @agjs/tsforge@0.53.6 \
     && { chmod -R a+rX /usr/local/bin/tsforge* 2>/dev/null || true; }
 
 USER runner
