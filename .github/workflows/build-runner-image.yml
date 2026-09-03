@@ -21,17 +21,21 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build and push
-        env:
-          VERSIONED_TAG: 2.336.0-tsforge0.53.5
         run: |
+          # Read the pinned version out of the Dockerfile itself — a hardcoded
+          # duplicate here has already gone stale once (image built 0.53.6
+          # while this workflow still asserted 0.53.5).
+          TSFORGE_VERSION=$(grep -oP '@agjs/tsforge@\K[0-9.]+' runner-image/Dockerfile)
+          VERSIONED_TAG="2.336.0-tsforge${TSFORGE_VERSION}"
+
           docker build \
             -t ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG} \
             -t ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${{ github.sha }} \
             runner-image
 
           echo "Smoke-testing the built image..."
-          docker run --rm ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG} tsforge --version | grep -q '0.53.5' \
-            || { echo "::error::tsforge --version did not report the pinned 0.53.5"; exit 1; }
+          docker run --rm ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG} tsforge --version | grep -q "${TSFORGE_VERSION}" \
+            || { echo "::error::tsforge --version did not report the pinned ${TSFORGE_VERSION}"; exit 1; }
 
           docker push ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${VERSIONED_TAG}
           docker push ghcr.io/boringstack-xyz/tsforge-reviewer-runner:${{ github.sha }}
